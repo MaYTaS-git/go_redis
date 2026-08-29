@@ -48,3 +48,9 @@ Status Key:
 - [X] **Task 6.3:** Implement graceful shutdown and OS signal handling (`cmd/server/main.go`).
 - [X] **Task 6.4:** Create sample `config.txt` and multi-platform compilation `Makefile`.
 - [X] **Task 6.5:** Full end-to-end integration testing using standard Redis clients (`redis-cli`, `ioredis`).
+
+## Phase 7: Performance Optimizations & Pipelined Benchmarking
+- [X] **Task 7.1:** Implement `TCP_NODELAY` (disabling Nagle's algorithm) and 256KB read/write socket buffers in `internal/server/tcp.go`.
+- [X] **Task 7.2:** Implement intelligent pipelined socket flushing (`Reader.Buffered() == 0`) to eliminate redundant write syscalls.
+- [X] **Task 7.3:** Upgrade benchmark suite (`cmd/benchmark/main.go` and `benchmark.js`) with command pipelining (`-p` flag) and 1M+ request stage timing.
+- [X] **Task 7.4:** Document performance architectural decisions in `AGENTS/` directory and `README.md`.

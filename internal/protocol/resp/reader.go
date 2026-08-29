@@ -28,6 +28,14 @@ func (r *Reader) Read(p []byte) (n int, err error) {
 	return r.rd.Read(p)
 }
 
+// Buffered returns the number of bytes that can be read from the current buffer.
+func (r *Reader) Buffered() int {
+	if r.rd != nil {
+		return r.rd.Buffered()
+	}
+	return 0
+}
+
 // ReadCommand reads a single command array from the client stream.
 // It returns a slice of byte slices representing the command and its arguments.
 // Supports both standard RESP arrays (*N\r\n...) and inline text format.

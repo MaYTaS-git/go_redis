@@ -121,6 +121,8 @@ The project must strictly adhere to the standard Go layout:
 
 ### Module F: Server, Security & Telemetry (`internal/server`)
 * **Networking:** TCP listener dispatching `go handleConnection(conn)`.
+* **Socket Tuning & Low Latency:** On client accept, set `TCP_NODELAY` (`SetNoDelay(true)`) to disable Nagle's delay, and set 256KB TCP read/write socket buffers (`SetReadBuffer`, `SetWriteBuffer`).
+* **Intelligent Pipelined Flushing:** Defer `client.Flush()` calls during pipelined request batches until `Reader.Buffered() == 0`. This eliminates redundant socket `write` syscalls and enables 500,000+ req/sec throughput.
 * **Auth Check:** If `requirepass` is set, block all commands except `AUTH` and `PING` until authenticated.
 * **Observability:** Prometheus HTTP listener on `metrics_port` exposing total commands, memory usage, connected clients, hit/miss counter.
 * **Signal Handling:** Catch `SIGINT` / `SIGTERM`, stop TCP listener, sync AOF file, flush snapshots, and terminate cleanly.

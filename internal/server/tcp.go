@@ -113,6 +113,12 @@ func (s *Server) acceptLoop() {
 func (s *Server) handleConnection(conn net.Conn) {
 	defer conn.Close()
 
+	if tcpConn, ok := conn.(*net.TCPConn); ok {
+		_ = tcpConn.SetNoDelay(true)
+		_ = tcpConn.SetReadBuffer(256 * 1024)
+		_ = tcpConn.SetWriteBuffer(256 * 1024)
+	}
+
 	atomic.AddInt64(&s.tracker.ConnectedClients, 1)
 	defer atomic.AddInt64(&s.tracker.ConnectedClients, -1)
 
@@ -122,6 +128,7 @@ func (s *Server) handleConnection(conn net.Conn) {
 	}
 
 	client := NewClient(conn, s.engine, s.cfg.RequirePass)
+	defer client.Flush()
 
 	for {
 		cmdArgs, err := client.Reader.ReadCommand()
@@ -151,7 +158,10 @@ func (s *Server) handleConnection(conn net.Conn) {
 			s.logger.Request(remoteAddr, cmdName, cmdArgs[1:], duration, dispatchErr)
 		}
 
-		_ = client.Flush()
+		// Intelligent Pipelined Flush: only flush socket when no more buffered commands are waiting
+		if client.Reader.Buffered() == 0 {
+			_ = client.Flush()
+		}
 
 		// AOF logging for write operations
 		if s.aof != nil && isWriteCommand(cmdName) {
