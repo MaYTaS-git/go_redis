@@ -69,16 +69,10 @@ This document maintains an immutable historical record of all file manipulations
   - `AGENTS/03_TASK_PROGRESS.md`
   - `AGENTS/04_AGENT_CHANGELOG.md`
 - **Summary:** Built the complete zero-dependency production-grade sharded Redis-compatible database system in Go. Implemented RESP protocol, 64-shard engine with cache-line padding, LRU/LFU eviction, background active TTL sampler, AOF logger with configurable fsync, atomic binary snapshotter, cold boot recovery engine, TLS listener, Prometheus HTTP metrics endpoint, command router, and full unit/integration test suites. All tests passing.
-### [2026-08-29 17:17:35] - High-Throughput Performance Optimizations & Pipelined Benchmarking
-- **Agent Action:** Implemented, Compiled, Verified
+### [2026-08-29 17:43:00] - Updated .gitignore Exclusions
+- **Agent Action:** Updated
 - **Files Affected:**
-  - `internal/server/tcp.go`
-  - `internal/protocol/resp/reader.go`
-  - `cmd/benchmark/main.go`
-  - `benchmark.js`
-  - `AGENTS/01_OVERVIEW_AND_GUIDELINES.md`
-  - `AGENTS/02_ARCHITECTURE_AND_SPECS.md`
-  - `AGENTS/03_TASK_PROGRESS.md`
+  - `.gitignore`
   - `AGENTS/04_AGENT_CHANGELOG.md`
-- **Summary:** Implemented `TCP_NODELAY` (disabling Nagle's algorithm) and 256KB read/write socket buffer tuning on accepted connections. Added `Buffered()` method to `resp.Reader` and deferred socket flushing (`Reader.Buffered() == 0`) to eliminate redundant write syscalls during pipelined command streams. Upgraded benchmark suite with command pipelining (`-p` flag) and 100k stage timing. Updated all AGENTS documentation files. All tests passing and binaries compiled cleanly.
-- **Resumption State:** High-Throughput Performance Enhancements Complete.
+- **Summary:** Enhanced `.gitignore` to strictly exclude `.gocache/`, `.cache/`, compiled binaries (`go_redis.exe`, `benchmark.exe`), data persistence folders (`data/`, `*.db`, `*.aof`), test coverage files, node logs, and temporary performance copy files (`performance*.txt`).
+- **Resumption State:** Workspace Clean & Ready for Git Version Control.
