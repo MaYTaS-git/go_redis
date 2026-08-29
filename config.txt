@@ -1,0 +1,38 @@
+# ==============================================================================
+# Go-Redis High-Performance In-Memory Data Store Configuration
+# ==============================================================================
+
+# Networking
+port 6379
+bind 0.0.0.0
+
+# Security (Leave empty for no password authentication)
+requirepass 
+
+# TLS Configuration
+tls_enabled false
+tls_cert 
+tls_key 
+
+# Memory & Eviction Management
+max_memory_mb 512
+eviction_policy allkeys-lru
+
+# Logging & Debugging Options
+log_enabled true
+log_level info          # Options: debug, info, warn, error
+log_requests true       # Logs every incoming request (origin IP, command name, payload summary, execution time)
+log_file                # Optional output log file path (e.g. ./logs/server.log). Leave empty for stdout console.
+
+# Append-Only File (AOF) Durability
+aof_enabled true
+aof_fsync everysec
+aof_path ./data/appendonly.aof
+
+# RDB Snapshotting
+snapshot_enabled true
+snapshot_interval_sec 300
+snapshot_path ./data/dump.db
+
+# Telemetry & Observability
+metrics_port 9090

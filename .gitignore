@@ -1,0 +1,33 @@
+# Binaries and Executables
+bin/
+*.exe
+*.exe.tmp
+*.dll
+*.so
+*.dylib
+go_redis
+
+# Data & Persistence Files
+data/
+*.db
+*.db.tmp
+*.aof
+*.aof.tmp
+
+# Benchmark & Output Logs
+performance.txt
+*.log
+logs/
+
+# Go Build Cache
+.gocache/
+
+# OS Generated Files
+.DS_Store
+Thumbs.db
+
+# IDE & Editor Directories
+.vscode/
+.idea/
+*.swp
+*.swo
