@@ -49,6 +49,12 @@ func main() {
 	router.Register("INFO", commands.HandleInfo)
 	router.Register("BGSAVE", commands.HandleBGSave)
 	router.Register("SHUTDOWN", commands.HandleShutdown)
+	router.Register("SELECT", commands.HandleSelect)
+	router.Register("CLIENT", commands.HandleClient)
+	router.Register("COMMAND", commands.HandleCommand)
+	router.Register("CONFIG", commands.HandleConfig)
+	router.Register("ECHO", commands.HandleEcho)
+	router.Register("HELLO", commands.HandleHello)
 
 	router.Register("GET", commands.HandleGet)
 	router.Register("SET", commands.HandleSet)

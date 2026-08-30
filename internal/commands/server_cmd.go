@@ -103,6 +103,58 @@ func HandleShutdown(c *server.Client, args [][]byte) error {
 	return nil
 }
 
+// HandleSelect processes SELECT index
+func HandleSelect(c *server.Client, args [][]byte) error {
+	if len(args) != 1 {
+		return c.Writer.WriteError("ERR wrong number of arguments for 'select' command")
+	}
+	return c.Writer.WriteOK()
+}
+
+// HandleClient processes CLIENT [SETINFO|SETNAME|GETNAME|LIST|KILL...]
+func HandleClient(c *server.Client, args [][]byte) error {
+	if len(args) == 0 {
+		return c.Writer.WriteError("ERR wrong number of arguments for 'client' command")
+	}
+	subCmd := strings.ToUpper(utils.BytesToString(args[0]))
+	switch subCmd {
+	case "SETINFO", "SETNAME":
+		return c.Writer.WriteOK()
+	case "GETNAME":
+		return c.Writer.WriteBulkString("")
+	case "LIST":
+		return c.Writer.WriteBulkString("id=1 addr=127.0.0.1 fd=1 name= age=1 idle=0 flags=N db=0 sub=0 psub=0 multi=-1 qbuf=0 qbuf-free=0 obl=0 oll=0 omem=0 events=r cmd=client\n")
+	default:
+		return c.Writer.WriteOK()
+	}
+}
+
+// HandleCommand processes COMMAND [DOCS|COUNT|LIST|INFO]
+func HandleCommand(c *server.Client, args [][]byte) error {
+	return c.Writer.WriteArrayHeader(0)
+}
+
+// HandleConfig processes CONFIG [GET|SET|RESETSTAT]
+func HandleConfig(c *server.Client, args [][]byte) error {
+	if len(args) > 0 && strings.ToUpper(utils.BytesToString(args[0])) == "GET" {
+		return c.Writer.WriteArrayHeader(0)
+	}
+	return c.Writer.WriteOK()
+}
+
+// HandleEcho processes ECHO message
+func HandleEcho(c *server.Client, args [][]byte) error {
+	if len(args) != 1 {
+		return c.Writer.WriteError("ERR wrong number of arguments for 'echo' command")
+	}
+	return c.Writer.WriteBulkBytes(args[0])
+}
+
+// HandleHello processes HELLO [protover [AUTH username password] [SETNAME name]]
+func HandleHello(c *server.Client, args [][]byte) error {
+	return c.Writer.WriteBulkString("proto:2 server:go-redis version:7.0.0 mode:standalone")
+}
+
 // IsAuthRequired returns true if client needs authentication for the command.
 func IsAuthRequired(c *server.Client, cmdName string) bool {
 	if c.RequirePass == "" || c.Authenticated {
@@ -110,5 +162,5 @@ func IsAuthRequired(c *server.Client, cmdName string) bool {
 	}
 
 	cmdUpper := strings.ToUpper(cmdName)
-	return cmdUpper != "AUTH" && cmdUpper != "PING"
+	return cmdUpper != "AUTH" && cmdUpper != "PING" && cmdUpper != "HELLO"
 }

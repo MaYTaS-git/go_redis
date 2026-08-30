@@ -1,13 +1,16 @@
 # Binaries and Executables
 bin/
 *.exe
+*.exe~
 *.exe.tmp
+*~
 *.dll
 *.so
 *.dylib
 go_redis
 go_redis.exe
 benchmark.exe
+external_benchmark.exe
 *.test
 
 # Go Build & Test Cache
