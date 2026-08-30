@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"strings"
 	"syscall"
 
@@ -16,6 +17,7 @@ import (
 	"go_redis/internal/server"
 	"go_redis/internal/storage"
 	syslog "go_redis/pkg/logger"
+	"go_redis/pkg/utils"
 )
 
 func main() {
@@ -28,7 +30,12 @@ func main() {
 		log.Fatalf("[BOOT] Failed to load configuration: %v", err)
 	}
 
-	// 2. Initialize Structured Logger
+	// 2. Ensure Data and Storage Directories Exist
+	if err := ensureDataDirectories(cfg); err != nil {
+		log.Printf("[BOOT] Warning: Failed to ensure data directory: %v", err)
+	}
+
+	// 3. Initialize Structured Logger
 	appLog, err := syslog.NewLogger(cfg.LogEnabled, cfg.LogLevel, cfg.LogRequests, cfg.LogFile)
 	if err != nil {
 		log.Fatalf("[BOOT] Failed to initialize logger: %v", err)
@@ -38,11 +45,11 @@ func main() {
 	appLog.Info("Starting Go-Redis Server...")
 	logAdaptationStatus(cfg.Port, cfg.Bind, appLog, engineStats(nil, cfg.MaxMemoryMB), cfg.AOFEnabled, cfg.SnapshotEnabled)
 
-	// 3. Initialize Storage Engine
+	// 4. Initialize Storage Engine
 	engine := storage.NewEngine(cfg.MaxMemoryMB, cfg.EvictionPolicy)
 	defer engine.Close()
 
-	// 4. Register Command Handlers in Router
+	// 5. Register Command Handlers in Router
 	router := server.NewRouter()
 	router.Register("PING", commands.HandlePing)
 	router.Register("AUTH", commands.HandleAuth)
@@ -72,41 +79,38 @@ func main() {
 	router.Register("FLUSHDB", commands.HandleFlushDB)
 	router.Register("DBSIZE", commands.HandleDBSize)
 
-	// 5. Cold Recovery (Load Snapshot + Replay AOF)
-	aofPath := ""
-	if cfg.AOFEnabled {
-		aofPath = cfg.AOFPath
-	}
+	// 6. Cold Recovery (Load Snapshot)
 	snapshotPath := ""
 	if cfg.SnapshotEnabled {
 		snapshotPath = cfg.SnapshotPath
+		if err := persistence.ColdRecovery(snapshotPath, "", engine, router); err != nil {
+			appLog.Warn("Snapshot cold recovery notice: %v", err)
+		} else {
+			appLog.Info("Snapshot recovery completed. Keys restored: %d", engine.DBSize())
+		}
 	}
 
-	if err := persistence.ColdRecovery(snapshotPath, aofPath, engine, router); err != nil {
-		appLog.Warn("Cold recovery notice: %v", err)
-	} else {
-		appLog.Info("Cold recovery completed successfully. Keys restored: %d", engine.DBSize())
-	}
-
-	// 6. Initialize AOF Logger
+	// 7. Initialize AOF Logger & Atomic Recovery (Single Open Descriptor)
 	var aof *persistence.AOF
 	if cfg.AOFEnabled {
-		aof, err = persistence.NewAOF(cfg.AOFPath, cfg.AOFFsync)
+		var replayed int
+		aof, replayed, err = persistence.NewAOF(cfg.AOFPath, cfg.AOFFsync, engine, router)
 		if err != nil {
 			appLog.Error("Failed to initialize AOF logger: %v", err)
 			os.Exit(1)
 		}
 		defer aof.Close()
+		appLog.Info("AOF persistence active. Total keys loaded: %d (Replayed AOF commands: %d)", engine.DBSize(), replayed)
 	}
 
-	// 7. Start TCP Server
+	// 8. Start TCP Server
 	srv := server.NewServer(cfg, engine, router, aof, appLog)
 	if err := srv.Start(); err != nil {
 		appLog.Error("Fatal server error: %v", err)
 		os.Exit(1)
 	}
 
-	// 8. Setup Signal Handling & Interactive Keyboard Listener
+	// 9. Setup Signal Handling & Interactive Keyboard Listener
 	shutdownCh := make(chan struct{})
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, os.Interrupt, syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP)
@@ -167,7 +171,7 @@ func main() {
 		}
 	}()
 
-	// 9. Wait for Shutdown Trigger (Ctrl+C, Signal, or 'q' key)
+	// 10. Wait for Shutdown Trigger (Ctrl+C, Signal, or 'q' key)
 	select {
 	case sig := <-sigCh:
 		appLog.Info("[SHUTDOWN] Signal %v received. Initiating graceful shutdown...", sig)
@@ -175,7 +179,7 @@ func main() {
 		appLog.Info("[SHUTDOWN] Exit key pressed. Initiating graceful shutdown...")
 	}
 
-	// 10. Graceful Cleanup
+	// 11. Graceful Cleanup
 	srv.Stop()
 
 	if cfg.SnapshotEnabled {
@@ -244,4 +248,39 @@ func printHelpMenu() {
   q + Enter  : Graceful Shutdown & Exit (or Ctrl+C)
 ==============================================================================`
 	fmt.Println(menu)
+}
+
+func ensureDataDirectories(cfg *config.Config) error {
+	// 1. Ensure root data directory in current working directory
+	_ = utils.EnsureDirExists("data")
+	_ = utils.EnsureDirExists("./data")
+
+	// 2. If running from binary, ensure data directory in executable root directory
+	if execPath, err := os.Executable(); err == nil {
+		execDir := filepath.Dir(execPath)
+		if execDir != "" && execDir != "." {
+			_ = utils.EnsureDirExists(filepath.Join(execDir, "data"))
+		}
+	}
+
+	// 3. Ensure parent directories for configured persistence files
+	if cfg.AOFPath != "" {
+		_ = utils.EnsureDir(cfg.AOFPath)
+	}
+	if cfg.SnapshotPath != "" {
+		_ = utils.EnsureDir(cfg.SnapshotPath)
+	}
+	if cfg.LogFile != "" {
+		_ = utils.EnsureDir(cfg.LogFile)
+	}
+
+	// 4. Verify directory existence
+	if info, err := os.Stat("data"); err == nil && info.IsDir() {
+		return nil
+	}
+	if info, err := os.Stat("./data"); err == nil && info.IsDir() {
+		return nil
+	}
+
+	return nil
 }

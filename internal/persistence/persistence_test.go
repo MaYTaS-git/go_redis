@@ -50,7 +50,7 @@ func TestAOFWriteAndReplay(t *testing.T) {
 	tempDir := t.TempDir()
 	aofPath := filepath.Join(tempDir, "appendonly.aof")
 
-	aof, err := NewAOF(aofPath, "always")
+	aof, _, err := NewAOF(aofPath, "always", nil, nil)
 	if err != nil {
 		t.Fatalf("NewAOF failed: %v", err)
 	}
@@ -62,7 +62,7 @@ func TestAOFWriteAndReplay(t *testing.T) {
 	time.Sleep(50 * time.Millisecond)
 	_ = aof.Close()
 
-	// Replay AOF
+	// Replay AOF on second startup with NewAOF directly
 	eng := storage.NewEngine(10, "allkeys-lru")
 	defer eng.Close()
 
@@ -70,9 +70,14 @@ func TestAOFWriteAndReplay(t *testing.T) {
 	router.Register("SET", commands.HandleSet)
 	router.Register("INCR", commands.HandleIncr)
 
-	err = ColdRecovery("", aofPath, eng, router)
+	aof2, replayed, err := NewAOF(aofPath, "always", eng, router)
 	if err != nil {
-		t.Fatalf("ColdRecovery failed: %v", err)
+		t.Fatalf("NewAOF replayer failed: %v", err)
+	}
+	defer aof2.Close()
+
+	if replayed != 3 {
+		t.Errorf("expected 3 replayed commands, got %d", replayed)
 	}
 
 	valUser, found := eng.Get("user")

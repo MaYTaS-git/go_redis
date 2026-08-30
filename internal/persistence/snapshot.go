@@ -7,6 +7,7 @@ import (
 	"os"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"go_redis/internal/storage"
 	"go_redis/pkg/utils"
@@ -24,6 +25,7 @@ type Snapshotter struct {
 
 // NewSnapshotter creates a snapshot manager.
 func NewSnapshotter(path string, engine *storage.Engine) *Snapshotter {
+	_ = utils.EnsureDir(path)
 	return &Snapshotter{
 		path:   path,
 		engine: engine,
@@ -40,9 +42,20 @@ func (s *Snapshotter) Save() error {
 	}
 
 	tmpPath := s.path + ".tmp"
-	f, err := os.OpenFile(tmpPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
+	var f *os.File
+	var err error
+	for attempt := 0; attempt < 10; attempt++ {
+		f, err = os.OpenFile(tmpPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
+		if err == nil {
+			break
+		}
+		if attempt < 9 {
+			_ = utils.EnsureDir(s.path)
+			time.Sleep(20 * time.Millisecond)
+		}
+	}
 	if err != nil {
-		return fmt.Errorf("failed to open snapshot tmp file: %w", err)
+		return fmt.Errorf("failed to open snapshot tmp file %s: %w", tmpPath, err)
 	}
 
 	// Write magic header

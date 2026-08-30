@@ -156,6 +156,7 @@ go build -ldflags="-s -w" -o go_redis.exe ./cmd/server
 ```bash
 ./go_redis.exe
 ```
+*Note: The server automatically creates the `./data` directory on initial startup. On Windows, if executing inside a protected Desktop folder, run the terminal as Administrator or execute `icacls . /grant "${env:USERNAME}:(OI)(CI)M"` once to grant directory creation permissions.*
 
 ### 3. Run Benchmark (1,000 Operations)
 ```bash
