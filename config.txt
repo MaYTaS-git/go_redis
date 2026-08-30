@@ -20,8 +20,8 @@ eviction_policy allkeys-lru
 
 # Logging & Debugging Options
 log_enabled true
-log_level info          # Options: debug, info, warn, error
-log_requests true       # Logs every incoming request (origin IP, command name, payload summary, execution time)
+log_level error          # Options: debug, info, warn, error
+log_requests false       # Logs every incoming request (origin IP, command name, payload summary, execution time)
 log_file                # Optional output log file path (e.g. ./logs/server.log). Leave empty for stdout console.
 
 # Append-Only File (AOF) Durability
