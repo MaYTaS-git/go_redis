@@ -7,7 +7,6 @@ import (
 	"log"
 	"os"
 	"os/signal"
-	"path/filepath"
 	"strings"
 	"syscall"
 
@@ -251,19 +250,12 @@ func printHelpMenu() {
 }
 
 func ensureDataDirectories(cfg *config.Config) error {
-	// 1. Ensure root data directory in current working directory
-	_ = utils.EnsureDirExists("data")
-	_ = utils.EnsureDirExists("./data")
-
-	// 2. If running from binary, ensure data directory in executable root directory
-	if execPath, err := os.Executable(); err == nil {
-		execDir := filepath.Dir(execPath)
-		if execDir != "" && execDir != "." {
-			_ = utils.EnsureDirExists(filepath.Join(execDir, "data"))
-		}
+	// 1. Ensure root data directory
+	if err := utils.EnsureDirExists("./data"); err != nil {
+		return err
 	}
 
-	// 3. Ensure parent directories for configured persistence files
+	// 2. Ensure parent directories for configured persistence files
 	if cfg.AOFPath != "" {
 		_ = utils.EnsureDir(cfg.AOFPath)
 	}
@@ -272,14 +264,6 @@ func ensureDataDirectories(cfg *config.Config) error {
 	}
 	if cfg.LogFile != "" {
 		_ = utils.EnsureDir(cfg.LogFile)
-	}
-
-	// 4. Verify directory existence
-	if info, err := os.Stat("data"); err == nil && info.IsDir() {
-		return nil
-	}
-	if info, err := os.Stat("./data"); err == nil && info.IsDir() {
-		return nil
 	}
 
 	return nil
